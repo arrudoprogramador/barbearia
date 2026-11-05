@@ -57,9 +57,10 @@ export default function AdminLayout({ onClose }) {
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
             >
-              <span>Ver Site do Cliente</span>
+              <span className="hidden sm:inline">Ver Site do Cliente</span>
+              <span className="sm:hidden">Site</span>
               <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
             </button>
 

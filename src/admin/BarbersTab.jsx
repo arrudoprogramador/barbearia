@@ -314,7 +314,7 @@ export default function BarbersTab() {
                               />
                             </div>
 
-                            <div className="flex items-center gap-1 ml-2 border-l pl-2 border-slate-200">
+                            <div className="flex items-center gap-1 sm:ml-2 sm:border-l sm:pl-2 border-slate-200">
                               <span className="text-slate-400">Almoço:</span>
                               <input
                                 type="time"

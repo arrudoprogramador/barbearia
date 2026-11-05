@@ -1,13 +1,14 @@
-# Prevent direct access to sensitive data files
-<Files "data.json">
+# Prevent direct browser access to sensitive data files
+<FilesMatch "^(data|rate_limits)\.json$">
     Order Allow,Deny
     Deny from all
-</Files>
+</FilesMatch>
 
-# Ensure PHP execution and clean headers
+# Ensure PHP execution and secure headers
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, DELETE"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-Admin-Password"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
 </IfModule>
-

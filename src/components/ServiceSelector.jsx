@@ -79,7 +79,7 @@ export default function ServiceSelector() {
             <div
               key={service.id}
               onClick={() => toggleService(service)}
-              className={`relative flex items-center justify-between p-3.5 sm:p-4 rounded-xl border bg-white transition-all duration-200 cursor-pointer group select-none ${
+              className={`relative flex items-center justify-between p-3.5 sm:p-4 rounded-xl border bg-white transition-all duration-200 cursor-pointer group select-none active:scale-[0.99] ${
                 isSelected
                   ? 'border-amber-500 bg-amber-50/30 ring-2 ring-amber-500/20 shadow-sm'
                   : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
@@ -146,15 +146,15 @@ export default function ServiceSelector() {
         })}
       </div>
 
-      {/* Floating Bottom Action Bar */}
+      {/* Floating Bottom Action Bar with iOS Safe Area Padding */}
       {selectedCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-float px-4 py-3 sm:py-4">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-float px-4 pt-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] animate-fade-in">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
             <div>
-              <div className="text-xs text-slate-500 font-medium">
-                {selectedCount} {selectedCount === 1 ? 'serviço' : 'serviços'} selecionado(s) • ~{totalDuration} min
+              <div className="text-[11px] text-slate-500 font-medium">
+                {selectedCount} {selectedCount === 1 ? 'serviço' : 'serviços'} • ~{totalDuration} min
               </div>
-              <div className="text-lg sm:text-xl font-extrabold text-slate-900">
+              <div className="text-lg sm:text-xl font-black text-slate-900">
                 {formatMoney(totalPrice)}
               </div>
             </div>
@@ -162,9 +162,9 @@ export default function ServiceSelector() {
             <button
               type="button"
               onClick={nextStep}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-sm shadow-md hover:shadow-lg transition-all duration-200 active:scale-98 cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
             >
-              <span>Avançar</span>
+              <span>Continuar</span>
               <ArrowRight className="w-4 h-4 text-amber-400" />
             </button>
           </div>

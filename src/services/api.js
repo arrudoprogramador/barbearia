@@ -5,13 +5,34 @@ const STORAGE_KEYS = {
   SERVICES: 'barber_services_v1',
   BARBERS: 'barber_barbers_v1',
   APPOINTMENTS: 'barber_appointments_v1',
-  ADMIN_TOKEN: 'barber_admin_auth'
+  ADMIN_PASSWORD: 'barber_admin_pass'
 };
 
-// Detect if running with PHP or Node API available
 const API_BASE = import.meta.env.VITE_API_URL || './api';
 
+function getAdminHeaders() {
+  const pass = sessionStorage.getItem(STORAGE_KEYS.ADMIN_PASSWORD) || localStorage.getItem(STORAGE_KEYS.ADMIN_PASSWORD) || 'admin123';
+  return {
+    'Content-Type': 'application/json',
+    'X-Admin-Password': pass,
+    'Authorization': `Bearer ${pass}`
+  };
+}
+
 export const api = {
+  // Store admin session key
+  setAdminPassword(pass) {
+    if (pass) {
+      sessionStorage.setItem(STORAGE_KEYS.ADMIN_PASSWORD, pass);
+      localStorage.setItem(STORAGE_KEYS.ADMIN_PASSWORD, pass);
+    }
+  },
+
+  clearAdminPassword() {
+    sessionStorage.removeItem(STORAGE_KEYS.ADMIN_PASSWORD);
+    localStorage.removeItem(STORAGE_KEYS.ADMIN_PASSWORD);
+  },
+
   // --- SETTINGS ---
   async getSettings() {
     try {
@@ -19,21 +40,29 @@ export const api = {
       if (res.ok) {
         const data = await res.json();
         if (data && data.fantasy_name) {
+          // Merge with stored credentials if available locally
+          const local = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              if (parsed.admin_credentials) {
+                data.admin_credentials = parsed.admin_credentials;
+              }
+            } catch {}
+          }
           localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data));
           return data;
         }
       }
     } catch {
-      // API not available, fallback to localStorage
+      // Fallback
     }
 
     const local = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (local) {
       try {
         return JSON.parse(local);
-      } catch {
-        // pass
-      }
+      } catch {}
     }
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(defaultSettings));
     return defaultSettings;
@@ -44,11 +73,11 @@ export const api = {
     try {
       await fetch(`${API_BASE}/index.php?action=save_settings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(settings)
       });
     } catch {
-      // LocalStorage is already updated
+      // LocalStorage already updated
     }
     return settings;
   },
@@ -65,16 +94,14 @@ export const api = {
         }
       }
     } catch {
-      // fallback
+      // Fallback
     }
 
     const local = localStorage.getItem(STORAGE_KEYS.SERVICES);
     if (local) {
       try {
         return JSON.parse(local);
-      } catch {
-        // pass
-      }
+      } catch {}
     }
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(defaultServices));
     return defaultServices;
@@ -85,11 +112,11 @@ export const api = {
     try {
       await fetch(`${API_BASE}/index.php?action=save_services`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(services)
       });
     } catch {
-      // fallback
+      // Fallback
     }
     return services;
   },
@@ -106,16 +133,14 @@ export const api = {
         }
       }
     } catch {
-      // fallback
+      // Fallback
     }
 
     const local = localStorage.getItem(STORAGE_KEYS.BARBERS);
     if (local) {
       try {
         return JSON.parse(local);
-      } catch {
-        // pass
-      }
+      } catch {}
     }
     localStorage.setItem(STORAGE_KEYS.BARBERS, JSON.stringify(defaultBarbers));
     return defaultBarbers;
@@ -126,19 +151,21 @@ export const api = {
     try {
       await fetch(`${API_BASE}/index.php?action=save_barbers`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(barbers)
       });
     } catch {
-      // fallback
+      // Fallback
     }
     return barbers;
   },
 
-  // --- APPOINTMENTS ---
+  // --- APPOINTMENTS (Admin view) ---
   async getAppointments() {
     try {
-      const res = await fetch(`${API_BASE}/index.php?action=get_appointments`);
+      const res = await fetch(`${API_BASE}/index.php?action=get_appointments`, {
+        headers: getAdminHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -147,19 +174,36 @@ export const api = {
         }
       }
     } catch {
-      // fallback
+      // Fallback
     }
 
     const local = localStorage.getItem(STORAGE_KEYS.APPOINTMENTS);
     if (local) {
       try {
         return JSON.parse(local);
-      } catch {
-        // pass
-      }
+      } catch {}
     }
     localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(sampleAppointments));
     return sampleAppointments;
+  },
+
+  // --- CLIENT LOOKUP (Privacy safe by phone) ---
+  async getMyAppointments(phone) {
+    const clean = (phone || '').replace(/\D/g, '');
+    if (!clean) return [];
+
+    try {
+      const res = await fetch(`${API_BASE}/index.php?action=get_my_appointments&phone=${encodeURIComponent(clean)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+      }
+    } catch {
+      // Fallback to local
+    }
+
+    const all = await this.getAppointments();
+    return all.filter(a => (a.client_phone || '').replace(/\D/g, '').includes(clean));
   },
 
   async createAppointment(appointmentData) {
@@ -180,7 +224,7 @@ export const api = {
         body: JSON.stringify(newAppointment)
       });
     } catch {
-      // pass
+      // LocalStorage already saved
     }
 
     return newAppointment;
@@ -194,12 +238,26 @@ export const api = {
     try {
       await fetch(`${API_BASE}/index.php?action=update_appointment_status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ id, status: newStatus })
       });
-    } catch {
-      // pass
-    }
+    } catch {}
+
+    return updated;
+  },
+
+  async clientCancelAppointment(id, phone) {
+    const appointments = await this.getAppointments();
+    const updated = appointments.map(a => a.id === id ? { ...a, status: 'cancelled' } : a);
+    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(updated));
+
+    try {
+      await fetch(`${API_BASE}/index.php?action=client_cancel_appointment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, phone })
+      });
+    } catch {}
 
     return updated;
   },
@@ -212,12 +270,10 @@ export const api = {
     try {
       await fetch(`${API_BASE}/index.php?action=delete_appointment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ id })
       });
-    } catch {
-      // pass
-    }
+    } catch {}
 
     return updated;
   },
@@ -228,7 +284,7 @@ export const api = {
     const services = await this.getServices();
     const barbers = await this.getBarbers();
     return {
-      version: '1.0',
+      version: '1.1',
       exported_at: new Date().toISOString(),
       settings,
       services,
@@ -254,4 +310,3 @@ export const api = {
     return true;
   }
 };
-

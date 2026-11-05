@@ -42,7 +42,7 @@ export default function ProfessionalSelector() {
         {/* Option: Any Professional */}
         <div
           onClick={() => handleSelect(null)}
-          className={`flex items-center justify-between p-4 rounded-xl border bg-white cursor-pointer transition-all duration-200 select-none group ${
+          className={`flex items-center justify-between p-4 rounded-xl border bg-white cursor-pointer transition-all duration-200 select-none group active:scale-[0.99] ${
             booking.selectedBarber === null
               ? 'border-amber-500 bg-amber-50/30 ring-2 ring-amber-500/20 shadow-sm'
               : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
@@ -86,7 +86,7 @@ export default function ProfessionalSelector() {
             <div
               key={barber.id}
               onClick={() => handleSelect(barber)}
-              className={`flex items-center justify-between p-4 rounded-xl border bg-white cursor-pointer transition-all duration-200 select-none group ${
+              className={`flex items-center justify-between p-4 rounded-xl border bg-white cursor-pointer transition-all duration-200 select-none group active:scale-[0.99] ${
                 isSelected
                   ? 'border-amber-500 bg-amber-50/30 ring-2 ring-amber-500/20 shadow-sm'
                   : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'

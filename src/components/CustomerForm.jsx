@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, User, Phone, FileText, Calendar, Clock, Scissors, Edit3, ShieldCheck } from 'lucide-react';
 import { useBarber } from '../context/BarberContext';
+import { formatDateBR } from '../utils/date';
 
 export default function CustomerForm() {
   const { booking, settings, savedUser, updateCustomerData, confirmBooking, prevStep, forgetSavedUser } = useBarber();
@@ -64,11 +65,7 @@ export default function CustomerForm() {
   const totalDuration = booking.selectedServices.reduce((sum, s) => sum + (s.duration || 0), 0);
 
   // Format date display
-  let dateFormatted = booking.selectedDate;
-  if (booking.selectedDate && booking.selectedDate.includes('-')) {
-    const [y, m, d] = booking.selectedDate.split('-');
-    dateFormatted = `${d}/${m}/${y}`;
-  }
+  const dateFormatted = formatDateBR(booking.selectedDate);
 
   return (
     <div className="pb-24 animate-fade-in">

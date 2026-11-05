@@ -19,3 +19,7 @@ dist-ssr
 .idea
 .env
 .env.*
+
+# Local data caches
+api/rate_limits.json
+api/data.json

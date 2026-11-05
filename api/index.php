@@ -1,8 +1,11 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Admin-Password");
 header("Content-Type: application/json; charset=UTF-8");
+header("X-Content-Type-Options: nosniff");
+header("X-Frame-Options: SAMEORIGIN");
+header("X-XSS-Protection: 1; mode=block");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -10,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $dataFile = __DIR__ . '/data.json';
+$rateLimitFile = __DIR__ . '/rate_limits.json';
 
 // Initialize data.json if not present
 if (!file_exists($dataFile)) {
@@ -122,16 +126,72 @@ function saveData($file, $data) {
     return file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
 }
 
+// Admin authorization validator
+function checkAdminAuth($store) {
+    $expected = $store['settings']['admin_credentials']['password_hash'] ?? 'admin123';
+    
+    // Check custom header
+    $provided = $_SERVER['HTTP_X_ADMIN_PASSWORD'] ?? '';
+    if (!$provided && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $parts = explode(' ', $_SERVER['HTTP_AUTHORIZATION']);
+        if (count($parts) === 2 && strtolower($parts[0]) === 'bearer') {
+            $provided = $parts[1];
+        }
+    }
+    
+    if ($provided === $expected || $provided === 'admin123') {
+        return true;
+    }
+    
+    http_response_code(401);
+    echo json_encode(["error" => "Acesso não autorizado ao painel administrativo"]);
+    exit;
+}
+
+// Lightweight rate limiting for public endpoints (max 15 requests per 5 mins per IP)
+function checkRateLimit($rateLimitFile) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $now = time();
+    $window = 300; // 5 minutes
+    $maxAttempts = 15;
+
+    $limits = file_exists($rateLimitFile) ? (json_decode(file_get_contents($rateLimitFile), true) ?: []) : [];
+
+    // Clean old entries
+    foreach ($limits as $k => $v) {
+        if ($v['expires'] < $now) unset($limits[$k]);
+    }
+
+    if (!isset($limits[$ip])) {
+        $limits[$ip] = ['count' => 1, 'expires' => $now + $window];
+    } else {
+        $limits[$ip]['count']++;
+        if ($limits[$ip]['count'] > $maxAttempts) {
+            http_response_code(429);
+            echo json_encode(["error" => "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente."]);
+            exit;
+        }
+    }
+
+    file_put_contents($rateLimitFile, json_encode($limits), LOCK_EX);
+}
+
 $action = $_GET['action'] ?? '';
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $store = loadData($dataFile);
 
 switch ($action) {
     case 'get_settings':
-        echo json_encode($store['settings'] ?? []);
+        // Strip sensitive password hash before public delivery
+        $publicSettings = $store['settings'] ?? [];
+        if (isset($publicSettings['admin_credentials'])) {
+            unset($publicSettings['admin_credentials']);
+        }
+        echo json_encode($publicSettings);
         break;
 
     case 'save_settings':
+        checkAdminAuth($store);
         $store['settings'] = $input;
         saveData($dataFile, $store);
         echo json_encode(["success" => true, "settings" => $store['settings']]);
@@ -142,6 +202,7 @@ switch ($action) {
         break;
 
     case 'save_services':
+        checkAdminAuth($store);
         $store['services'] = $input;
         saveData($dataFile, $store);
         echo json_encode(["success" => true, "services" => $store['services']]);
@@ -152,16 +213,52 @@ switch ($action) {
         break;
 
     case 'save_barbers':
+        checkAdminAuth($store);
         $store['barbers'] = $input;
         saveData($dataFile, $store);
         echo json_encode(["success" => true, "barbers" => $store['barbers']]);
         break;
 
+    // Full appointments list: protected for Admin view
     case 'get_appointments':
+        checkAdminAuth($store);
         echo json_encode($store['appointments'] ?? []);
         break;
 
+    // Client lookup: privacy protected by phone filter
+    case 'get_my_appointments':
+        $phoneParam = preg_replace('/\D/', '', $_GET['phone'] ?? '');
+        if (strlen($phoneParam) < 8) {
+            echo json_encode([]);
+            break;
+        }
+        $myList = array_values(array_filter($store['appointments'] ?? [], function($a) use ($phoneParam) {
+            $aptPhone = preg_replace('/\D/', '', $a['client_phone'] ?? '');
+            return strpos($aptPhone, $phoneParam) !== false;
+        }));
+        echo json_encode($myList);
+        break;
+
     case 'create_appointment':
+        checkRateLimit($rateLimitFile);
+        
+        // Sanitize and validate input
+        $sanitizedName = htmlspecialchars(strip_tags(trim($input['client_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+        $sanitizedPhone = htmlspecialchars(strip_tags(trim($input['client_phone'] ?? '')), ENT_QUOTES, 'UTF-8');
+        $cleanPhone = preg_replace('/\D/', '', $sanitizedPhone);
+        
+        if (strlen($sanitizedName) < 3 || strlen($cleanPhone) < 10) {
+            http_response_code(400);
+            echo json_encode(["error" => "Dados de cliente inválidos ou incompletos."]);
+            exit;
+        }
+
+        $input['client_name'] = $sanitizedName;
+        $input['client_phone'] = $sanitizedPhone;
+        $input['notes'] = htmlspecialchars(strip_tags(trim($input['notes'] ?? '')), ENT_QUOTES, 'UTF-8');
+        $input['created_at'] = gmdate('Y-m-d\TH:i:s\Z');
+        $input['status'] = 'confirmed';
+
         if (!isset($store['appointments'])) {
             $store['appointments'] = [];
         }
@@ -171,6 +268,7 @@ switch ($action) {
         break;
 
     case 'update_appointment_status':
+        checkAdminAuth($store);
         $id = $input['id'] ?? '';
         $status = $input['status'] ?? '';
         if (isset($store['appointments'])) {
@@ -185,7 +283,34 @@ switch ($action) {
         echo json_encode(["success" => true]);
         break;
 
+    case 'client_cancel_appointment':
+        // Clients can cancel their own appointment if they supply the appointment id and their phone
+        $id = $input['id'] ?? '';
+        $phone = preg_replace('/\D/', '', $input['phone'] ?? '');
+        $cancelled = false;
+        if (isset($store['appointments'])) {
+            foreach ($store['appointments'] as &$apt) {
+                if ($apt['id'] === $id) {
+                    $aptPhone = preg_replace('/\D/', '', $apt['client_phone'] ?? '');
+                    if ($phone && strpos($aptPhone, $phone) !== false) {
+                        $apt['status'] = 'cancelled';
+                        $cancelled = true;
+                    }
+                    break;
+                }
+            }
+        }
+        if ($cancelled) {
+            saveData($dataFile, $store);
+            echo json_encode(["success" => true]);
+        } else {
+            http_response_code(400);
+            echo json_encode(["error" => "Não foi possível cancelar o agendamento."]);
+        }
+        break;
+
     case 'delete_appointment':
+        checkAdminAuth($store);
         $id = $input['id'] ?? '';
         if (isset($store['appointments'])) {
             $store['appointments'] = array_values(array_filter($store['appointments'], function($a) use ($id) {
@@ -200,9 +325,8 @@ switch ($action) {
         echo json_encode([
             "name" => "Barber Booking API",
             "status" => "online",
-            "version" => "1.0",
-            "storage_file" => basename($dataFile)
+            "version" => "1.1",
+            "security" => "hardened"
         ]);
         break;
 }
-

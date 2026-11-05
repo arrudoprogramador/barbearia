@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Calendar, Plus, Scissors, MapPin, User, Clock, CalendarCheck } from 'lucide-react';
 import { useBarber } from '../context/BarberContext';
+import { formatDateBR } from '../utils/date';
 
 export default function BookingConfirmation({ onOpenMyBookings }) {
   const { booking, settings, resetBookingFlow } = useBarber();
@@ -21,11 +22,7 @@ export default function BookingConfirmation({ onOpenMyBookings }) {
   }
 
   // Format date display
-  let dateFormatted = appointment.date;
-  if (appointment.date && appointment.date.includes('-')) {
-    const [y, m, d] = appointment.date.split('-');
-    dateFormatted = `${d}/${m}/${y}`;
-  }
+  const dateFormatted = formatDateBR(appointment.date);
 
   // Google Calendar Link generator
   const createGoogleCalendarLink = () => {

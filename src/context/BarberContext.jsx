@@ -185,6 +185,7 @@ export function BarberProvider({ children }) {
     if (password === valid || password === 'admin123') {
       setIsAdminAuthenticated(true);
       localStorage.setItem('barber_admin_logged', 'true');
+      api.setAdminPassword(password);
       return true;
     }
     return false;
@@ -193,6 +194,7 @@ export function BarberProvider({ children }) {
   const logoutAdmin = () => {
     setIsAdminAuthenticated(false);
     localStorage.removeItem('barber_admin_logged');
+    api.clearAdminPassword();
   };
 
   const updateSettings = async (newSettings) => {
@@ -212,6 +214,11 @@ export function BarberProvider({ children }) {
 
   const updateAppointmentStatus = async (id, status) => {
     const updated = await api.updateAppointmentStatus(id, status);
+    setAppointments(updated);
+  };
+
+  const clientCancelAppointment = async (id, phone) => {
+    const updated = await api.clientCancelAppointment(id, phone);
     setAppointments(updated);
   };
 
@@ -277,6 +284,7 @@ export function BarberProvider({ children }) {
         updateServices,
         updateBarbers,
         updateAppointmentStatus,
+        clientCancelAppointment,
         deleteAppointment,
         formatWhatsAppMessage
       }}

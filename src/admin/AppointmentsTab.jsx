@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Search, Filter, Plus, Trash2, CheckCircle, XCircle, MessageCircle, Clock, User, Scissors } from 'lucide-react';
 import { useBarber } from '../context/BarberContext';
 import { api } from '../services/api';
+import { getLocalDateString, formatDateBR } from '../utils/date';
 
 export default function AppointmentsTab() {
   const { appointments, services, barbers, updateAppointmentStatus, deleteAppointment, formatWhatsAppMessage, confirmBooking } = useBarber();
@@ -11,19 +12,19 @@ export default function AppointmentsTab() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const today = new Date();
+  const todayStr = getLocalDateString(today);
+  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const tomorrowStr = getLocalDateString(tomorrow);
+
   // Manual modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [manualClient, setManualClient] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualServiceId, setManualServiceId] = useState(services[0]?.id || '');
   const [manualBarberId, setManualBarberId] = useState(barbers[0]?.id || '');
-  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualDate, setManualDate] = useState(todayStr);
   const [manualTime, setManualTime] = useState('10:00');
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter(apt => {
@@ -197,7 +198,7 @@ export default function AppointmentsTab() {
                   {/* Date & Time pill */}
                   <div className="w-24 text-center py-2 px-2 rounded-xl bg-slate-100 border border-slate-200/80 flex-shrink-0">
                     <span className="text-xs font-extrabold text-slate-900 block">{apt.time}</span>
-                    <span className="text-[10px] font-semibold text-slate-500 block uppercase">{apt.date}</span>
+                    <span className="text-[10px] font-semibold text-slate-500 block uppercase">{formatDateBR(apt.date)}</span>
                   </div>
 
                   <div>

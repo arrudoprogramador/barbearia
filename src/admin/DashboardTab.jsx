@@ -1,11 +1,12 @@
 import React from 'react';
 import { Calendar, DollarSign, Users, Clock, CheckCircle, XCircle, MessageCircle, AlertCircle } from 'lucide-react';
 import { useBarber } from '../context/BarberContext';
+import { getLocalDateString } from '../utils/date';
 
 export default function DashboardTab() {
   const { appointments, services, barbers, settings, updateAppointmentStatus, formatWhatsAppMessage } = useBarber();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
 
   // Appointments today
   const todayAppointments = appointments.filter(a => a.date === todayStr);

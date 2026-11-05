@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { X, Search, Calendar, Clock, Scissors, AlertCircle, Trash2, User, LogOut, CheckCircle } from 'lucide-react';
 import { useBarber } from '../context/BarberContext';
+import { formatDateBR } from '../utils/date';
 
 export default function MyBookingsModal({ isOpen, onClose }) {
-  const { appointments, updateAppointmentStatus, settings, savedUser, forgetSavedUser } = useBarber();
+  const { appointments, clientCancelAppointment, settings, savedUser, forgetSavedUser } = useBarber();
   const [searchPhone, setSearchPhone] = useState(savedUser?.phone || '');
   const [hasSearched, setHasSearched] = useState(!!savedUser);
 
@@ -19,7 +20,7 @@ export default function MyBookingsModal({ isOpen, onClose }) {
 
   const handleCancel = async (aptId) => {
     if (confirm("Deseja realmente cancelar este horário no sistema?")) {
-      await updateAppointmentStatus(aptId, 'cancelled');
+      await clientCancelAppointment(aptId, phoneQuery);
     }
   };
 
@@ -120,7 +121,7 @@ export default function MyBookingsModal({ isOpen, onClose }) {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                        {apt.date} às {apt.time}
+                        {formatDateBR(apt.date)} às {apt.time}
                       </span>
                     </div>
 
