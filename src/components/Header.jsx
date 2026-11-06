@@ -45,8 +45,12 @@ export default function Header({ onOpenAdmin, onOpenMyBookings }) {
           <div className="flex items-center gap-4 text-center sm:text-left">
             <div className="relative">
               <img
-                src={settings.avatar}
+                src={settings.avatar || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=500&h=500&q=85"}
                 alt={settings.fantasy_name}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=500&h=500&q=85";
+                }}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-slate-100 shadow-xs"
               />
               <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${isOpenNow ? 'bg-emerald-500' : 'bg-rose-400'}`} />

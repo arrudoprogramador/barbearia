@@ -37,3 +37,4 @@ export function minutesToTime(mins) {
 export function intervalsOverlap(start1, end1, start2, end2) {
   return Math.max(start1, start2) < Math.min(end1, end2);
 }
+

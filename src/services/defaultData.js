@@ -4,8 +4,8 @@ export const defaultSettings = {
   phone: "(11) 98765-4321",
   whatsapp: "5511987654321",
   instagram: "barbeariaferreira_oficial",
-  avatar: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=400&q=80",
-  banner: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1200&q=80",
+  avatar: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=500&h=500&q=85",
+  banner: "https://images.unsplash.com/photo-1512690459411-b9245aed614b?auto=format&fit=crop&w=1200&q=85",
   address: {
     street: "Estrada de Poá",
     number: "38",

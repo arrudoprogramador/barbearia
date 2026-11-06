@@ -61,7 +61,16 @@ export const api = {
     const local = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (local) {
       try {
-        return JSON.parse(local);
+        const parsed = JSON.parse(local);
+        if (parsed) {
+          // If local has the old beard closeup avatar, upgrade it to the new professional one
+          if (parsed.avatar && parsed.avatar.includes('photo-1503951914875-452162b0f3f1')) {
+            parsed.avatar = defaultSettings.avatar;
+            parsed.banner = defaultSettings.banner;
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(parsed));
+          }
+          return parsed;
+        }
       } catch {}
     }
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(defaultSettings));
